@@ -6,9 +6,6 @@ HUDMAP_UPDATE_TIME = 2
 -- Pixel size of the player marker texture
 HUDMAP_MARKER_SIZE = {x=15, y=15}
 
--- Default texture when no map is available
-HUDMAP_DEFAULT_TEXTURE = "hudmap_default.png"
-
 -- Default user preferences
 HUDMAP_DEFAULT_PREFS = {visible=true, scale=1}
 

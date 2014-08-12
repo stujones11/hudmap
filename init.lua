@@ -1,12 +1,12 @@
 hudmap = {
-	id = {},
+	marker = {},
 	map = {},
 	pref = {},
+	registered_maps = {},
 }
 
-HUDMAP_UPDATE_TIME = 2
+HUDMAP_UPDATE_TIME = 1
 HUDMAP_MARKER_SIZE = {x=15, y=15}
-HUDMAP_DEFAULT_TEXTURE = "hudmap_default.png"
 HUDMAP_DEFAULT_PREFS = {visible=true, scale=1}
 
 function hudmap:register_map(name, def)
@@ -14,7 +14,7 @@ function hudmap:register_map(name, def)
 		x = def.maxp.x - def.minp.x,
 		z = def.maxp.z - def.minp.z,
 	}
-	local map = {
+	table.insert(hudmap.registered_maps, {
 		name = name,
 		size = def.size,
 		minp = def.minp,
@@ -25,9 +25,11 @@ function hudmap:register_map(name, def)
 			x = scale_size.x / def.size.x,
 			y = scale_size.z / def.size.y,
 		},
-	}
-	table.insert(hudmap.map, map)
-	table.sort(hudmap.map, function(a, b) return a.area < b.area end)
+		marker_pos = {x=0, y=0},
+	})
+	table.sort(hudmap.registered_maps, function(a, b)
+		return a.area < b.area
+	end)
 end
 
 local modpath = minetest.get_modpath(minetest.get_current_modname())
@@ -43,12 +45,12 @@ local marker_offset = {
 	y = math.ceil(HUDMAP_MARKER_SIZE.y / 2),
 }
 
-local function get_map_texture(player)
-	local texture = HUDMAP_DEFAULT_TEXTURE
+local function get_map(player)
+	local name = player:get_player_name()
 	local pos = player:getpos()
-	if pos then
+	if name and pos then
 		local map = nil
-		for _, v in ipairs(hudmap.map) do
+		for _, v in ipairs(hudmap.registered_maps) do
 			if pos.x >= v.minp.x and pos.x <= v.maxp.x and
 					pos.y >= v.minp.y and pos.y <= v.maxp.y and
 					pos.z >= v.minp.z and pos.z <= v.maxp.z then
@@ -59,27 +61,53 @@ local function get_map_texture(player)
 		if map then
 			local x = pos.x - map.minp.x
 			local y = pos.z - map.minp.z
-			x = x / map.scale.x - marker_offset.x
+			x = map.size.x - x / map.scale.x - marker_offset.x
 			y = map.size.y - y / map.scale.y - marker_offset.y
-			texture = "[combine:"..map.size.x.."x"..map.size.y..
-				":0,0,="..map.texture..":"..x..","..y..",=hudmap_marker.png"
+			map.marker_pos = {
+				x = -x * hudmap.pref[name].scale,
+				y = y * hudmap.pref[name].scale,
+			}
+			return map
 		end
 	end
-	return texture
+end
+
+local function remove_hud(player, name)
+	player:hud_remove(hudmap.map[name])
+	player:hud_remove(hudmap.marker[name])
+	hudmap.map[name] = nil
+	hudmap.marker[name] = nil
 end
 
 local function update_hud(player)
 	local name = player:get_player_name()
-	if hudmap.id[name] then
-		player:hud_change(hudmap.id[name], "text", get_map_texture(player))
-	else
+	if hudmap.pref[name].visible == false then
+		return
+	end
+	local map = get_map(player)
+	if hudmap.map[name] then
+		if map then
+			player:hud_change(hudmap.map[name], "text", map.texture)
+			player:hud_change(hudmap.marker[name], "offset", map.marker_pos)
+		else
+			remove_hud(player, name)
+		end
+	elseif map then
 		local scale = hudmap.pref[name].scale
-		hudmap.id[name] = player:hud_add({
+		hudmap.map[name] = player:hud_add({
 			hud_elem_type = "image",
 			position = {x=1,y=0},
 			scale = {x=scale, y=scale},
-			text = get_map_texture(player),
+			text = map.texture,
 			offset = {x=0,y=0},
+			alignment = {x=-1,y=1},
+		})
+		hudmap.marker[name] = player:hud_add({
+			hud_elem_type = "image",
+			position = {x=1,y=0},
+			scale = {x=scale, y=scale},
+			text = "hudmap_marker.png",
+			offset = map.marker_pos,
 			alignment = {x=-1,y=1},
 		})
 	end
@@ -90,9 +118,7 @@ minetest.register_on_joinplayer(function(player)
 	hudmap.pref[name] = HUDMAP_DEFAULT_PREFS
 	minetest.after(1, function(player)
 		if player then
-			if hudmap.pref[name].visible == true then
-				update_hud(player)
-			end
+			update_hud(player)
 		end
 	end, player)
 end)
@@ -101,10 +127,7 @@ minetest.register_globalstep(function(dtime)
 	timer = timer + dtime
 	if timer > HUDMAP_UPDATE_TIME then
 		for _,player in ipairs(minetest.get_connected_players()) do
-			local name = player:get_player_name()
-			if hudmap.pref[name].visible == true then
-				update_hud(player)
-			end
+			update_hud(player)
 		end
 		timer = 0
 	end
@@ -125,16 +148,14 @@ minetest.register_chatcommand("hudmap", {
 			update_hud(player)
 		elseif cmd == "off" then
 			hudmap.pref[name].visible = false
-			player:hud_remove(hudmap.id[name])
-			hudmap.id[name] = nil
+			remove_hud(player, name)
 		elseif cmd == "scale" then
 			if args then
 				scale = tonumber(args)
 				if scale then
 					if scale > 0 then
 						hudmap.pref[name].scale = scale
-						player:hud_remove(hudmap.id[name])
-						hudmap.id[name] = nil
+						remove_hud(player, name)
 						update_hud(player)
 						return
 					end

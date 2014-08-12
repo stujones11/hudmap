@@ -11,7 +11,7 @@ License Code: LGPL v2.1
 
 License Textures: WTFPL
 
-Adds a scalable overhead map to the player's HUD.
+Adds a scalable overhead map and position marker to the player's HUD.
 Map images must be supplied by the server admin and configured in hudmap.conf.
 See hudmap.conf.example for a demo setup featuring the fantastic Karsthafen map.
 
