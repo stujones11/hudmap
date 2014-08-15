@@ -66,9 +66,8 @@ end
 
 local function get_map(player)
 	local name = player:get_player_name()
-	local pos = player:getpos()
+	local pos = hudmap.player[name].pos
 	if name and pos.x and pos.z then
-		hudmap.player[name].pos = pos
 		for _, map in ipairs(hudmap.registered_maps) do
 			if pos_inside_map(pos, map) then
 				return map
@@ -143,7 +142,7 @@ local function update_hud(player)
 		for k, v in pairs(hudmap.player) do
 			if k ~= name and v.pos.x and v.pos.z then
 				if pos_inside_map(v.pos, map) then
-					local pos = get_marker_pos(v.pos, map, k)
+					local pos = get_marker_pos(v.pos, map, name)
 					if v.marker[name] then
 						player:hud_change(v.marker[name], "offset", pos)
 					else
@@ -209,7 +208,12 @@ minetest.register_globalstep(function(dtime)
 	timer = timer + dtime
 	if timer > HUDMAP_UPDATE_TIME then
 		for _,player in ipairs(minetest.get_connected_players()) do
-			update_hud(player)
+			local name = player:get_player_name()
+			local pos = player:getpos()
+			if name and pos then
+				hudmap.player[name].pos = pos
+				update_hud(player)
+			end
 		end
 		timer = 0
 	end
