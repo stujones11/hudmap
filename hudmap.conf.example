@@ -6,8 +6,14 @@ HUDMAP_UPDATE_TIME = 2
 -- Pixel size of the player marker texture
 HUDMAP_MARKER_SIZE = {x=15, y=15}
 
+-- Allow other player markers
+HUDMAP_PLAYER_MARKERS = true
+
+-- Allow other player nametags
+HUDMAP_PLAYER_NAMETAGS = true
+
 -- Default user preferences
-HUDMAP_DEFAULT_PREFS = {visible=true, scale=1}
+HUDMAP_DEFAULT_PREFS = {visible=false, scale=1, players=false, names=false}
 
 -- Karsthafen example maps
 
