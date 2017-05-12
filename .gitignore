@@ -5,3 +5,6 @@
 tags
 *.vim
 
+# Eclipse project files & directories
+.project
+.settings
